@@ -205,6 +205,7 @@ check_endpoint "Madrid levels (Windows VM)" "/api/madrid/parking/levels" api || 
 check_endpoint "Paris API (Linux VM)" "/api/paris/parking" api || failed=1
 check_endpoint "Paris metrics (Linux VM)" "/api/paris/parking/metrics" api || failed=1
 check_endpoint "Paris levels (Linux VM)" "/api/paris/parking/levels" api || failed=1
+check_endpoint "Paris dependency (Linux VM)" "/api/paris/parking/dependency" api || failed=1
 
 # Supporting Container Apps consumed by the frontend.
 check_endpoint "Chaos Control (Container App)" "/api/chaos-control/state" api || failed=1

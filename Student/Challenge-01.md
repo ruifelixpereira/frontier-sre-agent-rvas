@@ -62,7 +62,7 @@ The connector gives the agent access to GitHub. The repository link tells it whi
 make repos
 ```
 
-Verify under **Repositories** in the portal — the Grubify repository should be listed.
+Verify under **Code Access** in the portal — the Grubify repository should be listed.
 
 ### Step 6 — Test the connection
 
