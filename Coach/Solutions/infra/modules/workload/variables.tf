@@ -28,12 +28,6 @@ variable "rg_sample_food" {
   default     = "rg-sre-spoke-foodapp-paas"
 }
 
-variable "create_network_watcher" {
-  description = "Set to true to create NetworkWatcherRG and the Network Watcher. Set to false (default) to read an existing one via data source."
-  type        = bool
-  default     = false
-}
-
 # ─── Parking App ───────────────────────────────────────────────────────────────
 
 variable "vm_admin_username" {

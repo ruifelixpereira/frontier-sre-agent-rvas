@@ -15,7 +15,7 @@
 - Call out slow resources: Container Apps environment and monitoring plumbing are the usual long pole.
 - Emphasize that the Student Terraform root deliberately does **not** create the SRE Agent — `make deploy` provisions only the workload. Creating the agent by hand, and associating it with the four workload resource groups, is the point of Step 3 in Challenge 00.
 - Note the Coach environment is different: `Coach/` runs its own Terraform root (`Solutions/infra`), which additionally deploys a Coach-owned reference agent via `module "sre_agent"` (`make infra` from `Coach/`). This lets a coach stand up a fully wired reference environment for demos and answer-checking without doing the manual portal steps every time — it is not what students do, and should not be presented to students as an alternative.
-- Show the two workload validation surfaces: `make validate` for the VNet Flow Logs and virtual machine lab, and `make validate-food` for Grubify.
+- Show the three workload validation surfaces: `make validate` for VNet Flow Logs and the virtual machine lab, `make validate-food` for Grubify, and `make validate-parking` for the public Parking Manager Web App, its VNet integration, and proxied APIs.
 
 ## Expected Student Output
 
@@ -23,15 +23,26 @@
 - The student created the SRE Agent themselves in the portal, associated the four workload resource groups, and granted it Contributor.
 - `Student/.env` is filled in with `SRE_AGENT_RG` and `SRE_AGENT_NAME` so later `make` targets can reach the agent.
 - Baseline traffic completes via the Student scenario targets.
-- The Student infrastructure and Grubify validation targets both return healthy.
+- The Student infrastructure, Grubify, and Parking Manager validation targets return healthy.
 
 ## Common Issues and Hints
 
 - **Symptom:** `make deploy` fails early with Azure authentication or subscription errors. **Fix:** verify `az account show`, select the intended subscription, and rerun the Terraform plan before applying.
-- **Symptom:** Terraform attempts to create resources that already exist outside its state. **Fix:** stop the apply and reconcile the authoritative state or import strategy; do not create duplicates.
+- **Symptom:** Terraform reports that `NetworkWatcher_<region>` was not found in `NetworkWatcherRG`. **Fix:** enable Network Watcher manually for the same region passed to Terraform, then rerun `make deploy`:
+
+	```bash
+	az network watcher configure \
+		--resource-group NetworkWatcherRG \
+		--locations <region> \
+		--enabled true
+	```
+
+	For example, use `--locations uksouth` when deploying with `TF_VARS='-var="location=uksouth"'`. Terraform intentionally reads the regional Network Watcher but does not create or manage it.
+- **Symptom:** Terraform attempts to create resources that already exist outside its state. **Fix:** stop the apply and run `make drift` from `Student/`, passing the same `TF_VARS` used for deployment when applicable. This read-only comparison lists resources deployed in the workshop resource groups but missing from local state, plus state entries not returned by Azure. It also generates `terraform import` commands when a deployed resource uniquely matches a planned Terraform address. Verify each candidate's ownership and configuration before running the suggested command; do not create duplicates or import unrelated resources.
 - **Symptom:** The agent portal URL returns an error immediately after creation. **Fix:** confirm `provisioning_state` and power state, then allow a short control-plane propagation interval before retrying.
 - **Symptom:** A later Student target cannot resolve the agent name or resource group. **Fix:** confirm `Student/.env` has `SRE_AGENT_RG` and `SRE_AGENT_NAME` set, matching the agent created in the portal.
 - **Symptom:** Infrastructure validation succeeds but Grubify is unhealthy. **Fix:** generate food traffic, inspect `make food-status`, and check the active Container Apps revision before redeploying.
+- **Symptom:** `make validate-parking` reports an unhealthy proxy endpoint. **Fix:** inspect the named endpoint, confirm the Web App has VNet integration for private VM APIs, and verify route-all remains disabled for public API access.
 - **Symptom:** Traffic Analytics is empty in later challenges. **Fix:** ensure baseline traffic ran successfully and allow for the documented ingestion interval.
 - **Symptom:** The agent can diagnose a workload but cannot perform an expected write action. **Fix:** confirm the agent's role assignment on the associated resource groups is Contributor, not Reader.
 

@@ -163,6 +163,10 @@ output "parking_frontend_service_plan_name" {
   value = module.workload.parking_frontend_service_plan_name
 }
 
+output "parking_network" {
+  value = module.workload.parking_network
+}
+
 output "parking_madrid_vm_name" {
   value = module.workload.parking_madrid_vm_name
 }

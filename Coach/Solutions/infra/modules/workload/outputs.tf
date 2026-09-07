@@ -317,6 +317,18 @@ output "parking_frontend_service_plan_name" {
   value       = azurerm_service_plan.parking_frontend.name
 }
 
+output "parking_network" {
+  description = "Dedicated Parking VNet resources shared by the frontend integration and VM subnets."
+  value = {
+    vnet_id            = azurerm_virtual_network.parking.id
+    vnet_name          = azurerm_virtual_network.parking.name
+    vm_subnet_id       = azurerm_subnet.parking_vms.id
+    frontend_subnet_id = azurerm_subnet.parking_frontend.id
+    vm_nsg_id          = azurerm_network_security_group.parking.id
+    vm_nat_gateway_id  = azurerm_nat_gateway.parking.id
+  }
+}
+
 output "parking_madrid_vm_name" {
   description = "Name of the Madrid Windows Server VM (parking API on port 3002)."
   value       = var.deploy_madrid_vm ? azurerm_windows_virtual_machine.madrid[0].name : ""

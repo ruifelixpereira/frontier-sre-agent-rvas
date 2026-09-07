@@ -9,12 +9,11 @@ module "workload" {
     random  = random
   }
 
-  location               = var.location
-  rg_hub                 = var.rg_hub
-  rg_spoke_web_api       = var.rg_spoke_web_api
-  rg_spoke_data          = var.rg_spoke_data
-  rg_sample_food         = var.rg_sample_food
-  create_network_watcher = var.create_network_watcher
+  location         = var.location
+  rg_hub           = var.rg_hub
+  rg_spoke_web_api = var.rg_spoke_web_api
+  rg_spoke_data    = var.rg_spoke_data
+  rg_sample_food   = var.rg_sample_food
 
   vm_admin_username         = var.vm_admin_username
   vm_admin_password         = var.vm_admin_password

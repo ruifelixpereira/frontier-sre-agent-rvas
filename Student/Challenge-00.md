@@ -8,7 +8,7 @@ Before the learning starts, two things must exist: the Azure lab infrastructure,
 
 You'll deploy the workload infrastructure with Terraform and then create your own Azure SRE Agent — an empty agent with no skills, no knowledge, no subagents, and no connectors. That emptiness is intentional. In Challenges 01 through 06 you will add each capability yourself, one at a time, and observe exactly what each addition unlocks. By the end of Challenge 06 you'll have built the fully configured agent from scratch — and you'll understand every piece of it.
 
-The lab infrastructure includes: a hub-spoke network with Azure Firewall, IaaS VMs running a web/API/DB tier, VNet Flow Logs with Traffic Analytics, the **Grubify** food-ordering app on Azure Container Apps, and the containerized **Parking Manager** frontend on a public Azure Web App. The Parking Manager uses VNet integration to reach its private VM-hosted APIs without routing through the firewall. All of this is provisioned by Terraform — the SRE Agent creation and configuration are entirely up to you.
+The lab infrastructure includes: a hub-spoke network with Azure Firewall, IaaS VMs running a web/API/DB tier, VNet Flow Logs with Traffic Analytics, the **Grubify** food-ordering app on Azure Container Apps, and the containerized **Parking Manager** frontend on a public Azure Web App. The Parking Manager frontend, Madrid VM, and Paris VM share a dedicated Parking VNet, isolated from the Web/API IaaS VNets and their NSGs and routes. This VNet is not peered with the hub and does not use the firewall; the VMs use their own NAT Gateway for outbound access, while the frontend uses a UDR-free integration subnet to reach the private VM-hosted APIs. All of this is provisioned by Terraform — the SRE Agent creation and configuration are entirely up to you.
 
 ## Description
 
@@ -31,10 +31,10 @@ The default deployment location is `swedencentral`. To deploy to a different Azu
 the Terraform `location` variable through `TF_VARS`:
 
 ```bash
-make deploy TF_VARS='-var="location=xxxxx"'
+cd Student && make deploy TF_VARS='-var="location=your_preferred_region_here"'
 ```
 
-This runs `terraform init` + `terraform apply` against the Student Terraform root at `Student/Resources/infra/`, then points the Grubify container apps at the published images. It provisions the workload only. Creating the Azure SRE Agent is your job, in Step 3.
+This runs `terraform init` + `terraform apply` against the Student Terraform root at `Student/Resources/infra/`, then points the Grubify and Parking Manager container apps at the published images. It provisions the workload only. Creating the Azure SRE Agent is your job, in Step 3.
 
 > First-time deployment takes approximately **15–20 minutes**. The Container Apps environment is the slowest resource to provision.
 
@@ -51,8 +51,8 @@ you just applied: building it, and then filling it with capabilities in Challeng
 point of this workshop.
 
 1. Go to [https://sre.azure.com](https://sre.azure.com) and sign in.
-2. Create an agent in a resource group of your choice, in **Sweden Central**, the same region as the
-   workload you just deployed.
+2. Create an agent in a resource group of your choice, in the same region as the
+   workload you just deployed (e.g., the default is **Sweden Central**, but you can choose another region if desired).
 3. Confirm that its provisioning state is `Succeeded` and its power state is `Running`.
 4. Associate all workload resource groups with the agent and give it **Contributor** permission.
 5. Print the resource groups the agent must watch, from the `Student/` directory:
@@ -97,9 +97,10 @@ Start traffic generation so monitoring data exists before you reach the operatio
 ```bash
 make baseline-traffic
 make food-traffic
+make parking-traffic
 ```
 
-`make baseline-traffic` runs a traffic burst on the IaaS VMs via a remote run-command (takes 2–4 minutes). `make food-traffic` hits the Grubify API endpoints and completes in seconds.
+`make baseline-traffic` runs a traffic burst on the IaaS VMs via a remote run-command (takes 2–4 minutes). `make food-traffic` hits the Grubify API endpoints. `make parking-traffic` sends requests through the public Parking Manager frontend to the Lisbon, Madrid, Paris, and Berlin APIs and the control services.
 
 ### Step 6 — Validate the lab
 
@@ -107,6 +108,7 @@ make food-traffic
 # Lab infrastructure health
 make validate
 make validate-food
+make validate-parking
 ```
 
 ## Pre-flight Validation Checklist
@@ -126,8 +128,9 @@ gh --version
 # 4. Lab infrastructure is healthy
 make validate
 make validate-food
+make validate-parking
 
-All four checks must succeed before proceeding. If `make validate` fails, re-run `make deploy`. If `make validate-food` fails, run `make food-status` to check the Grubify Container Apps revision state.
+All validation commands must succeed before proceeding. If `make validate` fails, re-run `make deploy`. If `make validate-food` fails, run `make food-status` to check the Grubify Container Apps revision state. If `make validate-parking` fails, review the reported Web App configuration or unhealthy proxy endpoint before continuing.
 
 ## Success Criteria
 
@@ -136,7 +139,7 @@ All four checks must succeed before proceeding. If `make validate` fails, re-run
 3. All lab resource groups are associated with the agent in the portal
 4. The agent permission level is **Contributor**
 5. `Student/.env` is configured with your `SRE_AGENT_RG` and `SRE_AGENT_NAME`
-6. Both `validate.sh` and `validate-sample-food-app.sh` return healthy
+6. `make validate`, `make validate-food`, and `make validate-parking` return healthy
 7. **Explain to your coach** — why does the SRE Agent require Contributor permission instead of Reader? What specific actions in later challenges require write access, and what governance controls prevent the agent from taking unconstrained write actions?
 
 ## Learning Resources
@@ -149,4 +152,4 @@ All four checks must succeed before proceeding. If `make validate` fails, re-run
 ## Tips
 
 - Run **only** `make deploy` here.
-- Run `make baseline-traffic` and `make food-traffic` before proceeding to Challenge 01. VNet Flow Logs and Traffic Analytics data accumulate over time and are needed for Challenges 12–18.
+- Run `make baseline-traffic`, `make food-traffic`, and `make parking-traffic` before proceeding to Challenge 01. Monitoring and Traffic Analytics data accumulate over time and are needed in later challenges.
