@@ -31,14 +31,16 @@ Collect from the user or conversation:
 
 ### 2. Check for duplicates
 
-Before creating, search existing issues using `github-mcp_search_issues`:
+Before creating, search existing issues using the ConnectorV2 GitHub MCP tool
+`github-mcp_search_issues`:
 
 ```
 query: "<keywords> repo:microsoft/frontier-sre-agent-rvas is:open"
 ```
 
 If a matching open issue exists, inform the user and offer to comment on it
-instead of creating a duplicate.
+instead of creating a duplicate. Read the issue with `github-mcp_issue_read`
+and add the new evidence with `github-mcp_add_issue_comment`.
 
 ### 3. Format the issue
 
@@ -55,7 +57,7 @@ by `vm-health-control`.
 
 ### 4. Create the issue
 
-Use `github-mcp_issue_write` with:
+Use `github-mcp_issue_write` from the ConnectorV2 GitHub MCP server with:
 
 - **Title** prefixed with `[Parking]` — e.g. `[Parking] High latency on Paris API`
 - **Body** from the template above

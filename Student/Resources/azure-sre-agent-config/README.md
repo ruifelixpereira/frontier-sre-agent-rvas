@@ -99,12 +99,14 @@ GitHub and incident-response surfaces:
 - `connectors/github-mcp.yaml` — GitHub managed connector exposed through ConnectorV2 as an MCP
   server. OAuth consent is completed interactively in the portal; no Personal Access Token is
   stored or injected anywhere in this repository. Branch and pull-request operations require
-  approval. This single connector now provides all GitHub access: the separate legacy
+  approval. It provides GitHub actions such as issue, branch, file, and pull-request operations.
+  The separate legacy
   `connectors/github.yaml` manifest was removed because its `dataConnectorType: GitHubOAuth`
   shape is deprecated and is rejected by the configuration contract validation.
 - `connectors/example-github-mcp.yaml` — historical Personal Access Token reference only;
   excluded from deployment by the `example-` prefix rule.
-- `repos/grubify.yaml` — the repository the agent clones for the source-fix delivery flow. It is
+- `repos/grubify.yaml` — the Code Access repository the agent clones for source search, file reads,
+  and incident correlation. GitHub write operations remain owned by ConnectorV2 `github-mcp`. It is
   **this workshop repository**, resolved automatically from the `origin` remote, because the
   application source lives under `Student/Resources/grubify` and because the person running the
   workshop must be able to review and merge the proposed fix on a repository they own.

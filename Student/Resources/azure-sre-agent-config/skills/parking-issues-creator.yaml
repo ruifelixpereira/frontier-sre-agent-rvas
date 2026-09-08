@@ -11,10 +11,10 @@ spec:
     - ./parking-issues-creator.md
   tools:
     - SearchMemory
-    - github-mcp_issue_write
-    - github-mcp_issue_read
     - github-mcp_add_issue_comment
-    - github-mcp_search_issues
-    - github-mcp_list_issues
     - github-mcp_get_label
+    - github-mcp_issue_read
+    - github-mcp_issue_write
+    - github-mcp_list_issues
+    - github-mcp_search_issues
 

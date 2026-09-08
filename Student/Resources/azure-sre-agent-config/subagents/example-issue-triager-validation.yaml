@@ -18,19 +18,17 @@ spec:
     Classify each qualifying issue, add the configured labels, and post the triage comment.
     If no issue qualifies, report a successful no-op.
 
-    Use only connected GitHub OAuth tools. Do not use the `gh` CLI, call GitHub REST directly,
+    Use only connected ConnectorV2 GitHub MCP tools. Do not use the `gh` CLI, call GitHub REST directly,
     search for tokens, or delegate authentication workarounds. If OAuth write authorization is
     unavailable, report the blocker once without changing either repository.
   tools:
     - SearchMemory
-  connectors:
-    - github
   mcp_tools:
-    - github-mcp_GetUser
-    - github-mcp_GetIssues
-    - github-mcp_GetIssueNum
-    - github-mcp_SearchIssues
-    - github-mcp_UpdateIssueNum
-    - github-mcp_GetLabels
-    - github-mcp_GetIssueLabels
+    - github-mcp_add_issue_comment
+    - github-mcp_get_label
+    - github-mcp_issue_read
+    - github-mcp_issue_write
+    - github-mcp_list_issue_types
+    - github-mcp_list_issues
+    - github-mcp_search_issues
   handoffs: []

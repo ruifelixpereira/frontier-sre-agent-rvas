@@ -20,7 +20,11 @@ Confirm the Parking Manager is running and the GitHub connector is authorized:
 make validate-parking
 ```
 
-In the SRE Agent portal, verify the **GitHub MCP** (`github-mcp`) connector shows as connected (green).
+In the SRE Agent portal, verify both halves of the GitHub integration:
+
+- Under **Code Access**, the `grubify` repository is connected for source context
+- Under **Builder > Connectors**, **GitHub MCP** (`github-mcp`) is connected (green)
+	and authorized for issue operations in `microsoft/frontier-sre-agent-rvas`
 
 Also verify that the configuration from earlier challenges is present:
 
@@ -49,7 +53,7 @@ The autonomous investigation should:
 - Determine whether `vm-health-control` generated the unhealthy event
 - Search for an existing open issue for the affected VM
 - Compose a structured issue using the `incident-report-template.md` from the knowledge base
-- Create an issue through the GitHub MCP, or comment on an existing matching issue
+- Create an issue through ConnectorV2 GitHub MCP, or comment on an existing matching issue
 - Return the created or reused GitHub issue URL in the investigation result
 
 Allow up to five minutes after the alert appears for the autonomous investigation
@@ -70,7 +74,7 @@ The agent will:
 - Retrieve the incident details from the incident platform
 - Query Log Analytics or Application Insights for supporting telemetry
 - Compose a structured issue using the `incident-report-template.md` from the knowledge base
-- Create the issue via the GitHub MCP (`github-mcp` connector)
+- Create the issue through ConnectorV2 GitHub MCP
 
 ### Step 4 — Review the created issue
 
@@ -114,12 +118,13 @@ make restore-parking
 ## Learning Resources
 
 - [Azure SRE Agent — GitHub integration](https://learn.microsoft.com/en-us/azure/sre-agent/github-connector)
-- [GitHub MCP server](https://github.com/github/github-mcp-server)
+- [Set up an MCP connector](https://learn.microsoft.com/en-us/azure/sre-agent/mcp-connector)
+- [Connect source code to Azure SRE Agent](https://learn.microsoft.com/en-us/azure/sre-agent/connect-source-code)
 - [Azure Monitor — alert management](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-manage-alert-instances)
 - [SRE Book — Incident Management](https://sre.google/sre-book/managing-incidents/)
 
 ## Tips
 
-- The GitHub connector requires the OAuth authorization completed in Challenge 01. If the agent returns a "not authorized" error when creating the issue, re-authorize the connector in the portal.
+- GitHub MCP requires the OAuth authorization completed in Challenge 01. If the agent returns a "not authorized" error when creating the issue, re-authorize `github-mcp` under **Builder > Connectors**.
 - The `incident-report-template.md` knowledge document defines the issue structure. If the agent's output doesn't match the expected format, check that the document is in the knowledge base and ask the agent to "use the incident report template."
 - You can also ask the agent to label the issue (`incident`, `sev2`, component name) if your GitHub repository has those labels defined.

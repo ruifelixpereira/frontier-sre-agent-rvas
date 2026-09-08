@@ -33,8 +33,6 @@ spec:
     available, do not open an empty pull request; report that precise blocker instead.
   tools:
     - SearchMemory
-  connectors:
-    - github
   mcp_tools:
     - github-mcp/*
   handoffs: []
