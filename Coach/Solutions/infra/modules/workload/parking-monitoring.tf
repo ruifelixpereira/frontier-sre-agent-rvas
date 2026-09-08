@@ -255,3 +255,110 @@ resource "azurerm_role_assignment" "vm_health_metrics_publisher" {
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true
 }
+
+# ─── Azure Monitor alerts: VM Health Status ───────────────────────────────────
+
+resource "azurerm_monitor_action_group" "vm_health" {
+  name                = "ag-vm-health"
+  resource_group_name = azurerm_resource_group.parking_chaos.name
+  short_name          = "VMHealth"
+  tags                = local.resource_tags
+}
+
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "vm_health_unhealthy" {
+  name                    = "vm-health-unhealthy"
+  resource_group_name     = azurerm_resource_group.parking_chaos.name
+  location                = azurerm_resource_group.parking_chaos.location
+  display_name            = "Parking VM Unhealthy Alert"
+  description             = "Fires when a parking VM is reported as unhealthy in the VMHealthStatus_CL custom table."
+  enabled                 = true
+  severity                = 2
+  scopes                  = [azurerm_log_analytics_workspace.demo.id]
+  evaluation_frequency    = "PT1M"
+  window_duration         = "PT5M"
+  auto_mitigation_enabled = true
+  tags                    = local.resource_tags
+
+  criteria {
+    query                   = <<-KQL
+      VMHealthStatus_CL
+      | where healthState == "Unhealthy"
+      | summarize unhealthyCount = count() by vmName, city, bin(TimeGenerated, 5m)
+    KQL
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    dimension {
+      name     = "vmName"
+      operator = "Include"
+      values   = ["*"]
+    }
+
+    dimension {
+      name     = "city"
+      operator = "Include"
+      values   = ["*"]
+    }
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  action {
+    action_groups = [azurerm_monitor_action_group.vm_health.id]
+  }
+
+  depends_on = [azapi_resource.vm_health_table]
+}
+
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "vm_health_recovered" {
+  name                    = "vm-health-recovered"
+  resource_group_name     = azurerm_resource_group.parking_chaos.name
+  location                = azurerm_resource_group.parking_chaos.location
+  display_name            = "Parking VM Recovered Alert"
+  description             = "Fires when a previously unhealthy parking VM is reported as healthy again."
+  enabled                 = true
+  severity                = 3
+  scopes                  = [azurerm_log_analytics_workspace.demo.id]
+  evaluation_frequency    = "PT5M"
+  window_duration         = "PT5M"
+  auto_mitigation_enabled = false
+  tags                    = local.resource_tags
+
+  criteria {
+    query                   = <<-KQL
+      VMHealthStatus_CL
+      | where healthState == "Healthy" and previousState == "Unhealthy"
+      | summarize recoveryCount = count() by vmName, city, bin(TimeGenerated, 5m)
+    KQL
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    dimension {
+      name     = "vmName"
+      operator = "Include"
+      values   = ["*"]
+    }
+
+    dimension {
+      name     = "city"
+      operator = "Include"
+      values   = ["*"]
+    }
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  action {
+    action_groups = [azurerm_monitor_action_group.vm_health.id]
+  }
+
+  depends_on = [azapi_resource.vm_health_table]
+}

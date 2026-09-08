@@ -14,7 +14,7 @@ In this challenge you'll inject a guest-OS failure that the platform cannot dete
 
 ### Before you start
 
-Verify the Grubify web tier is serving traffic normally:
+Verify the Web IaaS application web tier is serving traffic normally:
 
 ```bash
 make validate

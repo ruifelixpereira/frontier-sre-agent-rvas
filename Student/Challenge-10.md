@@ -17,27 +17,52 @@ In this challenge you'll trigger a Parking Manager incident and direct the agent
 Confirm the Parking Manager is running and the GitHub connector is authorized:
 
 ```bash
-make validate
+make validate-parking
 ```
 
 In the SRE Agent portal, verify the **GitHub MCP** (`github-mcp`) connector shows as connected (green).
 
+Also verify that the configuration from earlier challenges is present:
+
+- The `parking-vm-unhealthy` incident filter is enabled and routes to `parking-vm-incident-reporter` in Autonomous mode
+- The `parking-vm-incident-reporter` subagent and `parking-issues-creator` skill are available
+- The `incident-report-template.md` document is present in the knowledge base
+
 ### Step 1 — Observe an active incident
 
-Navigate to **Incident Response** in the SRE Agent portal. If a Parking Manager alert is active, note its title and severity. If there is no active alert, trigger one:
+Navigate to **Incidents** in the SRE Agent portal. If a Parking Manager alert is active, note its title and severity. If there is no active alert, trigger one:
 
 ```bash
 make trigger-parking-down
 ```
 
-Alternatively, describe a realistic incident from the health report you generated in Challenge 09 — for example, an API with elevated error rate.
+The incident might take 3-5 minutes to appear.
 
-### Step 2 — Create a GitHub issue
+### Step 2 — Observe the automation that creates a GitHub issue
 
-In the agent chat, prompt:
+Open the Parking incident and follow its investigation timeline. Confirm that the
+`parking-vm-unhealthy` filter assigns the incident to `parking-vm-incident-reporter`.
+The autonomous investigation should:
+
+- Retrieve the incident details from the incident platform
+- Query Log Analytics for supporting telemetry
+- Determine whether `vm-health-control` generated the unhealthy event
+- Search for an existing open issue for the affected VM
+- Compose a structured issue using the `incident-report-template.md` from the knowledge base
+- Create an issue through the GitHub MCP, or comment on an existing matching issue
+- Return the created or reused GitHub issue URL in the investigation result
+
+Allow up to five minutes after the alert appears for the autonomous investigation
+and GitHub operation to complete.
+
+### Step 3 — Create a GitHub issue without automation
+
+If the automatic route is unavailable, describe a realistic incident in the agent
+chat. This prompt activates the `parking-issues-creator` skill without using
+`/agent`, which is reserved for subagents:
 
 ```text
-Create an issue on GitHub to track and resolve this incident. Include: the incident title and severity, a summary of what the monitoring data shows, the affected component, the recommended investigation steps, and any remediation that has already been applied.
+Create an issue on GitHub to track and resolve high latency on the Paris parking API. Include: the incident title and severity, a summary of what the monitoring data shows, the affected component, the recommended investigation steps, and any remediation that has already been applied.
 ```
 
 The agent will:
@@ -47,7 +72,7 @@ The agent will:
 - Compose a structured issue using the `incident-report-template.md` from the knowledge base
 - Create the issue via the GitHub MCP (`github-mcp` connector)
 
-### Step 3 — Review the created issue
+### Step 4 — Review the created issue
 
 Find the issue in GitHub:
 
@@ -63,7 +88,7 @@ Review the issue content. Does it contain:
 - Recommended next steps?
 - Links to relevant Log Analytics or Application Insights queries?
 
-### Step 4 — Add a comment
+### Step 5 — Add a comment
 
 Ask the agent to update the issue with additional findings:
 
@@ -71,7 +96,7 @@ Ask the agent to update the issue with additional findings:
 Add a comment to the GitHub issue with the current API error rate and the top 3 error messages from the last hour.
 ```
 
-### Step 5 — Clean up
+### Step 6 — Clean up
 
 Once you have completed all steps above and the GitHub issue is created, restore the Parking Manager to a healthy state:
 
