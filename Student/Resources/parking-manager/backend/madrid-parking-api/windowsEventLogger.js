@@ -222,7 +222,7 @@ class WindowsEventLogger {
    */
   _consoleLog(logEntry) {
     const prefix = `[Event Viewer ${logEntry.level}]`;
-    
+
     switch (logEntry.level) {
       case 'ERROR':
         console.error(prefix, JSON.stringify(logEntry, null, 2));
