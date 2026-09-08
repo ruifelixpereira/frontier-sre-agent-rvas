@@ -20,6 +20,7 @@ ENDPOINT=""
 ENV_FILE=""
 TARGET=""
 RESOURCE_NAME=""
+RESOURCE_EXCLUDE_NAME=""
 RESOURCE_FILE=""
 YES="false"
 APPLY_FAILURES=()
@@ -43,6 +44,7 @@ Options:
   --config PATH           Configuration directory. Overrides layout auto-discovery.
   --target TARGET         Limit validate, plan, apply, verify, or delete to one configuration target.
   --name NAME             Limit the selected target to one manifest name.
+  --exclude-name NAME     Exclude one manifest name from the selected target.
   --file PATH             Limit the selected target to one YAML manifest or knowledge file.
   --env-file PATH         Override the default root .env file used for placeholder substitution.
   --yes                   Confirm destructive delete operations.
@@ -279,6 +281,11 @@ parse_args() {
         RESOURCE_NAME="${2:-}"
         shift 2
         ;;
+      --exclude-name)
+        [[ -n "${2:-}" ]] || die "--exclude-name requires a name"
+        RESOURCE_EXCLUDE_NAME="${2:-}"
+        shift 2
+        ;;
       --file)
         [[ -n "${2:-}" ]] || die "--file requires a path"
         if [[ "${2}" = /* ]]; then
@@ -375,7 +382,7 @@ validate_knowledge_exclusions() {
 }
 
 selection_requested() {
-  [[ -n "${TARGET}" || -n "${RESOURCE_NAME}" || -n "${RESOURCE_FILE}" ]]
+  [[ -n "${TARGET}" || -n "${RESOURCE_NAME}" || -n "${RESOURCE_EXCLUDE_NAME}" || -n "${RESOURCE_FILE}" ]]
 }
 
 validate_target() {
@@ -453,8 +460,11 @@ normalize_selection() {
 
   selection_requested || return 0
 
-  [[ -n "${RESOURCE_NAME}" || -n "${TARGET}" || -n "${RESOURCE_FILE}" ]] || return 0
+  [[ -n "${RESOURCE_NAME}" || -n "${RESOURCE_EXCLUDE_NAME}" || -n "${TARGET}" || -n "${RESOURCE_FILE}" ]] || return 0
   [[ -n "${RESOURCE_NAME}" && -z "${TARGET}" && -z "${RESOURCE_FILE}" ]] && die "--name requires --target or --file"
+  [[ -n "${RESOURCE_EXCLUDE_NAME}" && -z "${TARGET}" ]] && die "--exclude-name requires --target"
+  [[ -n "${RESOURCE_EXCLUDE_NAME}" && -n "${RESOURCE_NAME}" ]] && die "--exclude-name cannot be combined with --name"
+  [[ -n "${RESOURCE_EXCLUDE_NAME}" && -n "${RESOURCE_FILE}" ]] && die "--exclude-name cannot be combined with --file"
 
   if [[ -n "${RESOURCE_FILE}" ]]; then
     [[ -f "${RESOURCE_FILE}" ]] || die "File not found: ${RESOURCE_FILE}"
@@ -1132,9 +1142,10 @@ selected_yaml_files() {
 
   while IFS= read -r file; do
     [[ -z "${file}" ]] && continue
-    if [[ -n "${RESOURCE_NAME}" ]]; then
+    if [[ -n "${RESOURCE_NAME}" || -n "${RESOURCE_EXCLUDE_NAME}" ]]; then
       name="$(manifest_raw_name "${file}")"
-      [[ "${name}" == "${RESOURCE_NAME}" ]] || continue
+      [[ -z "${RESOURCE_NAME}" || "${name}" == "${RESOURCE_NAME}" ]] || continue
+      [[ -z "${RESOURCE_EXCLUDE_NAME}" || "${name}" != "${RESOURCE_EXCLUDE_NAME}" ]] || continue
     fi
     printf '%s\n' "${file}"
   done < <(find_yaml_files "${CONFIG_DIR}/${relative_dir}")

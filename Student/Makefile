@@ -66,7 +66,7 @@ SCENARIOS  := Resources/scenarios/scripts
 include Resources/scenarios/Makefile
 
 .PHONY: deploy infra destroy drift check-env \
-        connectors repos knowledge-files skills subagents incident-filters scheduled-tasks config-sre-agent
+	connectors connectors-learn repos knowledge-files skills subagents incident-filters scheduled-tasks config-sre-agent
 		
 ## deploy: provision lab infrastructure (Challenge 00)
 deploy: infra
@@ -94,9 +94,13 @@ ifndef SRE_AGENT_NAME
 	$(error SRE_AGENT_NAME is not set. See the .env instructions at the top of this Makefile.)
 endif
 
-## connectors: apply connector YAMLs — GitHub OAuth + Microsoft Learn MCP + Berlin MCP (Challenges 01, 04, 07)
+## connectors: apply connector YAMLs — GitHub OAuth + Berlin MCP (Challenges 01, 07)
 connectors: check-env
-	$(SCRIPT) apply --target connectors --subscription $(SRE_AGENT_SUB) --resource-group $(SRE_AGENT_RG) --agent $(SRE_AGENT_NAME)
+	$(SCRIPT) apply --target connectors --exclude-name microsoft-learn-mcp --subscription $(SRE_AGENT_SUB) --resource-group $(SRE_AGENT_RG) --agent $(SRE_AGENT_NAME)
+
+## connectors-learn: apply the Microsoft Learn MCP connector (Challenge 04)
+connectors-learn: check-env
+	$(SCRIPT) apply --target connectors --name microsoft-learn-mcp --subscription $(SRE_AGENT_SUB) --resource-group $(SRE_AGENT_RG) --agent $(SRE_AGENT_NAME)
 
 ## repos: apply repository link YAMLs — Grubify (Challenge 01)
 repos: check-env

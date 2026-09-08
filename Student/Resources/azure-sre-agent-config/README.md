@@ -174,6 +174,10 @@ plan, apply, and verify across every non-`example-*` object and knowledge file i
 The wrapper resolves the Berlin MCP endpoint from Terraform output; its authentication token is
 optional for the lab and can be supplied through `Student/.env`.
 
+For focused challenge deployment, `make connectors` applies the GitHub and Berlin connectors but
+excludes Microsoft Learn. Use `make connectors-learn` to apply only `microsoft-learn-mcp`.
+The broad `make config-sre-agent` workflow still includes all three certified connectors.
+
 Full desired-state deployment:
 
 ```bash
