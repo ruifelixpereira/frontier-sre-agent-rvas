@@ -1,6 +1,6 @@
 # Azure SRE Agent Configuration
 
-This directory is the Git source of truth for Azure SRE Agent configuration that is not managed by Terraform.
+This directory is the Git source of truth for Azure SRE Agent configuration applied by the configuration workflow. Some agent-level settings may also have an idempotent Terraform baseline.
 
 The deployment script reads YAML files, optionally injects Markdown content through `spec.content_file`, converts the result to JSON, and calls the documented Azure SRE Agent APIs.
 
@@ -14,6 +14,7 @@ The deployment script reads YAML files, optionally injects Markdown content thro
 | `connectors/` | MCP connectors and OAuth connector definitions | ARM `Microsoft.App/agents/connectors@2026-01-01` for `AgentConnector`; ConnectorV2 data-plane APIs for interactive OAuth |
 | `common-prompts/` | Shared prompts | Data plane `/api/v2/extendedAgent/commonprompts/{name}` |
 | `automations/scheduled-tasks/` | Recurring work | Data plane `/api/v2/extendedAgent/scheduledtasks/{name}` |
+| `incident-platforms/` | Incident management platform | ARM PATCH on `Microsoft.App/agents@2026-01-01` |
 | `automations/incident-filters/` | Incident routing filters | Data plane `/api/v2/extendedAgent/incidentFilters/{name}` |
 | `automations/http-triggers/` | HTTP trigger definitions | Data plane `/api/v1/httptriggers/create` |
 | `repos/` | Code repository connections | Data plane `/api/v2/repos/{name}` |
@@ -113,9 +114,10 @@ GitHub and incident-response surfaces:
   is a behavioural rule stated in `custom-instructions.md`, in the `code-analyzer` and
   `aca-app-incident-handler` subagents and in the `source-fix-delivery` skill. It is not a
   boundary enforced by the platform, and the workshop material says so openly.
-- Azure Monitor incident platform — **owned by Terraform** in the agent body
-  (`incidentManagementConfiguration = { type: AzMonitor, connectionName: azmonitor }`); there is
-  no data-plane manifest for it.
+- `incident-platforms/azure-monitor.yaml` — connects Azure Monitor by applying
+  `incidentManagementConfiguration = { type: AzMonitor, connectionName: azmonitor }` through an
+  ARM PATCH. Run `make incident-platforms` for focused deployment. The full configuration workflow
+  also applies it before incident filters; Terraform establishes the same idempotent baseline.
 - `automations/incident-filters/` — three domain-routed response plans: `sample-food-http-errors`,
   `web-tier-nginx`, and `network-observability-review`, plus the workshop-specific
   `parking-vm-unhealthy` plan. The network specialist runs fully autonomously and applies the

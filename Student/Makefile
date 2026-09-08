@@ -66,7 +66,7 @@ SCENARIOS  := Resources/scenarios/scripts
 include Resources/scenarios/Makefile
 
 .PHONY: deploy infra destroy drift check-env \
-	connectors connectors-learn repos knowledge-files skills subagents incident-filters scheduled-tasks config-sre-agent
+	connectors connectors-learn repos knowledge-files skills subagents incident-platforms incident-filters scheduled-tasks config-sre-agent
 		
 ## deploy: provision lab infrastructure (Challenge 00)
 deploy: infra
@@ -117,6 +117,10 @@ skills: check-env
 ## subagents: apply subagent YAMLs (Challenge 05)
 subagents: check-env
 	$(SCRIPT) apply --target subagents --subscription $(SRE_AGENT_SUB) --resource-group $(SRE_AGENT_RG) --agent $(SRE_AGENT_NAME)
+
+## incident-platforms: connect Azure Monitor as the incident platform (Challenge 06)
+incident-platforms: check-env
+	$(SCRIPT) apply --target incident-platforms --subscription $(SRE_AGENT_SUB) --resource-group $(SRE_AGENT_RG) --agent $(SRE_AGENT_NAME)
 
 ## incident-filters: apply incident filter / response plan YAMLs (Challenge 06)
 incident-filters: check-env

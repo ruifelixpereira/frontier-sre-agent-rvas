@@ -387,7 +387,7 @@ selection_requested() {
 
 validate_target() {
   case "$1" in
-    skills|subagents|tools|common-prompts|scheduled-tasks|incident-filters|connectors|repos|hooks|plugin-configs|http-triggers|plugin-marketplaces|plugin-installations|knowledge-files|custom-instructions)
+    skills|subagents|tools|common-prompts|scheduled-tasks|incident-platforms|incident-filters|connectors|repos|hooks|plugin-configs|http-triggers|plugin-marketplaces|plugin-installations|knowledge-files|custom-instructions)
       ;;
     *)
       die "Unknown target: $1"
@@ -420,6 +420,9 @@ infer_target_from_file() {
       ;;
     automations/scheduled-tasks/*.yaml|automations/scheduled-tasks/*.yml)
       printf 'scheduled-tasks\n'
+      ;;
+    incident-platforms/*.yaml|incident-platforms/*.yml)
+      printf 'incident-platforms\n'
       ;;
     automations/incident-filters/*.yaml|automations/incident-filters/*.yml)
       printf 'incident-filters\n'
@@ -606,6 +609,99 @@ manifest_name() {
 arm_agent_base_url() {
   printf 'https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.App/agents/%s' \
     "${SUBSCRIPTION_ID}" "${RESOURCE_GROUP}" "${AGENT_NAME}"
+}
+
+arm_patch_incident_platform() {
+  local file="$1"
+  local json platform_type connection_name body body_file request_status
+  validate_manifest "${file}"
+  json="$(manifest_json "${file}")"
+  [[ "$(jq -r '.kind // empty' <<< "${json}")" == "IncidentPlatform" ]] || \
+    die "${file}: expected kind IncidentPlatform"
+  platform_type="$(jq -r '.spec.platformType // empty' <<< "${json}")"
+  connection_name="$(jq -r '.spec.connectionName // empty' <<< "${json}")"
+  [[ -n "${platform_type}" ]] || die "${file}: incident platform requires spec.platformType"
+  [[ -n "${connection_name}" ]] || die "${file}: incident platform requires spec.connectionName"
+  body="$(jq -nc \
+    --arg type "${platform_type}" \
+    --arg connectionName "${connection_name}" \
+    '{properties:{incidentManagementConfiguration:{type:$type,connectionName:$connectionName}}}')"
+
+  if [[ "${COMMAND}" == "plan" ]]; then
+    log "PATCH ARM incident platform ${platform_type}/${connection_name} from ${file}"
+    return 0
+  fi
+
+  body_file="$(mktemp)"
+  chmod 600 "${body_file}"
+  printf '%s' "${body}" > "${body_file}"
+  if az rest --method PATCH \
+    --url "$(arm_agent_base_url)?api-version=${ARM_API_VERSION}" \
+    --headers 'Content-Type=application/json' \
+    --body "@${body_file}" \
+    --output none; then
+    rm -f "${body_file}"
+  else
+    request_status="$?"
+    rm -f "${body_file}"
+    return "${request_status}"
+  fi
+
+  wait_for_arm_incident_platform "${platform_type}" "${connection_name}"
+  log "Applied ARM incident platform ${platform_type}/${connection_name}"
+}
+
+wait_for_arm_incident_platform() {
+  local expected_platform_type="$1"
+  local expected_connection_name="$2"
+  local state stored_platform_type stored_connection_name attempt=1 max_attempts=12
+
+  while [[ "${attempt}" -le "${max_attempts}" ]]; do
+    if ! state="$(az rest --method GET \
+      --url "$(arm_agent_base_url)?api-version=${ARM_API_VERSION}" \
+      --query properties.incidentManagementConfiguration \
+      --output json)"; then
+      state='{}'
+    fi
+    stored_platform_type="$(jq -r '.type // empty' <<< "${state}")"
+    stored_connection_name="$(jq -r '.connectionName // empty' <<< "${state}")"
+    if [[ "${stored_platform_type}" == "${expected_platform_type}" && \
+      "${stored_connection_name}" == "${expected_connection_name}" ]]; then
+      return 0
+    fi
+    if [[ "${attempt}" -lt "${max_attempts}" ]]; then
+      sleep 5
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  die "ARM agent did not persist incident platform ${expected_platform_type}/${expected_connection_name}; last observed ${stored_platform_type:-<empty>}/${stored_connection_name:-<empty>}"
+}
+
+apply_incident_platforms() {
+  local file
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    arm_patch_incident_platform "${file}"
+  done < <(find_yaml_files "${CONFIG_DIR}/incident-platforms")
+}
+
+apply_incident_platforms_best_effort() {
+  local file
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    run_apply_step "incident-platforms: ${file}" arm_patch_incident_platform "${file}"
+  done < <(find_yaml_files "${CONFIG_DIR}/incident-platforms")
+}
+
+apply_incident_platforms_selected() {
+  local file count=0
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    count=$((count + 1))
+    arm_patch_incident_platform "${file}"
+  done < <(selected_yaml_files "incident-platforms")
+  [[ "${count}" -gt 0 ]] || die "No manifest matched target ${TARGET} name ${RESOURCE_NAME:-<all>}"
 }
 
 get_endpoint_from_arm() {
@@ -1778,6 +1874,12 @@ validate_current_api_contract() {
       [[ "$(jq -r '.spec.enabled // .spec.isEnabled // false' <<< "${json}")" == "true" ]] || \
         die "${file}: every demo scheduled task must be enabled"
       ;;
+    IncidentPlatform)
+      [[ -n "$(jq -r '.spec.platformType // empty' <<< "${json}")" ]] || \
+        die "${file}: incident platform requires spec.platformType"
+      [[ -n "$(jq -r '.spec.connectionName // empty' <<< "${json}")" ]] || \
+        die "${file}: incident platform requires spec.connectionName"
+      ;;
     AgentConnector)
       [[ "$(jq -r '.spec.properties.dataConnectorType // empty' <<< "${json}")" != "GitHubOAuth" ]] || \
         die "${file}: GitHubOAuth is deprecated; configure GitHub authentication through the GitHub Domains PAT API"
@@ -1869,6 +1971,7 @@ target_relative_dir() {
     tools) printf 'tools\n' ;;
     common-prompts) printf 'common-prompts\n' ;;
     scheduled-tasks) printf 'automations/scheduled-tasks\n' ;;
+    incident-platforms) printf 'incident-platforms\n' ;;
     incident-filters) printf 'automations/incident-filters\n' ;;
     connectors) printf 'connectors\n' ;;
     repos) printf 'repos\n' ;;
@@ -1891,6 +1994,7 @@ apply_all_config() {
     apply_extension_directory "tools" data_put_tool
     apply_extension_directory "common-prompts" data_put_common_prompt
     apply_extension_directory "automations/scheduled-tasks" data_put_scheduled_task
+    apply_incident_platforms
     apply_extension_directory "automations/incident-filters" data_put_incident_filter
 
     apply_data_directory "connectors" "/api/v2/extendedAgent/connectors"
@@ -1913,6 +2017,7 @@ apply_all_config() {
   apply_extension_directory_best_effort "tools" data_put_tool "tools"
   apply_extension_directory_best_effort "common-prompts" data_put_common_prompt "common-prompts"
   apply_extension_directory_best_effort "automations/scheduled-tasks" data_put_scheduled_task "scheduled-tasks"
+  apply_incident_platforms_best_effort
   apply_extension_directory_best_effort "automations/incident-filters" data_put_incident_filter "incident-filters"
 
   ensure_endpoint
@@ -1954,6 +2059,9 @@ apply_selected_config() {
     scheduled-tasks)
       [[ "${COMMAND}" == "plan" ]] || ensure_endpoint
       apply_extension_directory_selected "automations/scheduled-tasks" data_put_scheduled_task
+      ;;
+    incident-platforms)
+      apply_incident_platforms_selected
       ;;
     incident-filters)
       [[ "${COMMAND}" == "plan" ]] || ensure_endpoint
@@ -2127,6 +2235,12 @@ verify_selected_target() {
     scheduled-tasks)
       verify_data_target "/api/v2/extendedAgent/scheduledtasks"
       ;;
+    incident-platforms)
+      az rest --method GET \
+        --url "$(arm_agent_base_url)?api-version=${ARM_API_VERSION}" \
+        --query properties.incidentManagementConfiguration \
+        --output json
+      ;;
     incident-filters)
       verify_data_target "/api/v2/extendedAgent/incidentFilters"
       ;;
@@ -2163,7 +2277,9 @@ verify_live() {
   require_azure_dependencies
   require_arm_args
   normalize_selection
-  ensure_endpoint
+  if [[ "${TARGET}" != "incident-platforms" ]]; then
+    ensure_endpoint
+  fi
 
   if selection_requested; then
     verify_selected_target
@@ -2173,7 +2289,7 @@ verify_live() {
   log "Agent ARM state:"
   az rest --method GET \
     --url "$(arm_agent_base_url)?api-version=${ARM_API_VERSION}" \
-    --query '{name:name,provisioningState:properties.provisioningState,powerState:properties.powerState,endpoint:properties.agentEndpoint}' \
+    --query '{name:name,provisioningState:properties.provisioningState,powerState:properties.powerState,endpoint:properties.agentEndpoint,incidentPlatformType:properties.incidentManagementConfiguration.type,incidentPlatformConnection:properties.incidentManagementConfiguration.connectionName}' \
     --output table
 
   log "ARM sub-resource checks:"
