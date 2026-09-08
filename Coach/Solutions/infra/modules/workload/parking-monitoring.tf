@@ -1,10 +1,23 @@
-# ─── Data Collection Endpoint (shared by VM log collection DCRs) ──────────────
+# ─── Data Collection Endpoints for VM log collection ─────────────────────────
 
+# Retain the existing Linux endpoint for Paris to avoid replacing deployed infrastructure.
 resource "azurerm_monitor_data_collection_endpoint" "parking_vms" {
   name                = "dce-parking-vm-logs"
   resource_group_name = azurerm_resource_group.hub.name
   location            = azurerm_resource_group.hub.location
   kind                = "Linux"
+  tags                = local.resource_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "azurerm_monitor_data_collection_endpoint" "parking_madrid" {
+  name                = "dce-parking-madrid-windows-events"
+  resource_group_name = azurerm_resource_group.hub.name
+  location            = azurerm_resource_group.hub.location
+  kind                = "Windows"
   tags                = local.resource_tags
 
   lifecycle {
@@ -20,7 +33,7 @@ resource "azurerm_monitor_data_collection_rule" "madrid_windows_events" {
   name                        = "dcr-madrid-windows-events"
   resource_group_name         = azurerm_resource_group.hub.name
   location                    = azurerm_resource_group.hub.location
-  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.parking_vms.id
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.parking_madrid.id
   tags                        = local.resource_tags
 
   data_sources {

@@ -184,8 +184,8 @@ class WindowsEventLogger {
 
     const eventIdMap = {
       INFO: '1000',
-      WARNING: '1001',
-      ERROR: '1002'
+      WARNING: '999',
+      ERROR: '998'
     };
 
     const entryType = levelMap[logEntry.level] || 'INFORMATION';

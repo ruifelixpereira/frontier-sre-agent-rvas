@@ -60,6 +60,9 @@ $runnerPath = Join-Path $appDirectory "start-api.ps1"
     '$env:PORT = "3002"'
     '$env:NODE_ENV = "production"'
     '$env:CHAOS_CONTROL_URL = "${chaos_control_url}"'
+    '$env:EVENT_LOG_BACKEND = "eventcreate"'
+    '$env:EVENT_LOG_SOURCE = "MadridParkingAPI"'
+    '$env:EVENT_LOG_NAME = "Application"'
     '& "C:\Program Files\nodejs\node.exe" "C:\ParkingManager\madrid-parking-api\server.js" *>> "C:\ParkingManager\madrid-parking-api\service.log"'
     'exit $LASTEXITCODE'
 ) | Set-Content -Path $runnerPath -Encoding UTF8

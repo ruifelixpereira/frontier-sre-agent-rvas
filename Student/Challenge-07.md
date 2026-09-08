@@ -17,7 +17,7 @@ In this challenge you'll query a hybrid ecosystem from a single agent session â€
 Confirm the Parking Manager is running and generating data:
 
 ```bash
-make validate
+make validate-parking
 ```
 
 ### Step 1 â€” Query Azure-native logs for the Madrid API
