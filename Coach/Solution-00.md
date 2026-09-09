@@ -4,21 +4,23 @@
 
 ## Purpose
 
-- Establish the baseline: Azure authentication, authoritative Coach Terraform deployment, a reachable Azure SRE Agent, and working validation.
+- Establish the baseline: a student-owned repository fork, Azure authentication, authoritative Coach Terraform deployment, a reachable Azure SRE Agent, and working validation.
 - Students manually create the control-plane agent in the portal (Terraform intentionally does not create it for Student's root); `make deploy` in this challenge only provisions the workload every later data-plane capability depends on, and Challenges 01 through 06 build the data plane.
 - Expected time: 30–45 minutes.
 
 ## Mini-Lecture (5–7 min before challenge)
 
 - Workshop arc: **manual base agent → progressively add data-plane capabilities**. Make students distinguish the control-plane resource they create by hand from knowledge, skills, subagents, repositories, and automations, all of which they add themselves in later challenges.
-- Dependency chain to draw: Azure authentication → `make deploy` (workload only) → manual agent creation in the portal → resource-group association + Contributor role → baseline traffic → workload validation.
+- Dependency chain to draw: fork and clone the repository → Azure authentication → `make deploy` (workload only) → manual agent creation in the portal → resource-group association + Contributor role → baseline traffic → workload validation.
+- Explain the remote layout: the student's fork must be `origin`, while the Microsoft repository is `upstream`. Later configuration derives `GRUBIFY_REPO_URL` from `origin`, allowing the student and SRE Agent workflows to push branches and open pull requests against a repository the student owns.
 - Call out slow resources: Container Apps environment and monitoring plumbing are the usual long pole.
-- Emphasize that the Student Terraform root deliberately does **not** create the SRE Agent — `make deploy` provisions only the workload. Creating the agent by hand, and associating it with the four workload resource groups, is the point of Step 3 in Challenge 00.
+- Emphasize that the Student Terraform root deliberately does **not** create the SRE Agent — `make deploy` provisions only the workload. Creating the agent by hand and associating it with the workload resource groups is the point of Step 4 in Challenge 00.
 - Note the Coach environment is different: `Coach/` runs its own Terraform root (`Solutions/infra`), which additionally deploys a Coach-owned reference agent via `module "sre_agent"` (`make infra` from `Coach/`). This lets a coach stand up a fully wired reference environment for demos and answer-checking without doing the manual portal steps every time — it is not what students do, and should not be presented to students as an alternative.
 - Show the three workload validation surfaces: `make validate` for VNet Flow Logs and the virtual machine lab, `make validate-food` for Grubify, and `make validate-parking` for the public Parking Manager Web App, its VNet integration, and proxied APIs.
 
 ## Expected Student Output
 
+- The student created and cloned their own fork. `origin` points to that fork and `upstream` points to `microsoft/frontier-sre-agent-rvas`.
 - `make deploy` completes from `Student/` and provisions the workload only.
 - The student created the SRE Agent themselves in the portal, associated the four workload resource groups, and granted it Contributor.
 - `Student/.env` is filled in with `SRE_AGENT_RG` and `SRE_AGENT_NAME` so later `make` targets can reach the agent.
@@ -27,6 +29,7 @@
 
 ## Common Issues and Hints
 
+- **Symptom:** Later Code Access or pull-request workflows target the Microsoft repository or cannot push a branch. **Fix:** run `git remote -v`; confirm `origin` points to the student's fork and `upstream` points to `https://github.com/microsoft/frontier-sre-agent-rvas.git`.
 - **Symptom:** `make deploy` fails early with Azure authentication or subscription errors. **Fix:** verify `az account show`, select the intended subscription, and rerun the Terraform plan before applying.
 - **Symptom:** Terraform reports that `NetworkWatcher_<region>` was not found in `NetworkWatcherRG`. **Fix:** enable Network Watcher manually for the same region passed to Terraform, then rerun `make deploy`:
 
